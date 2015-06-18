@@ -2,6 +2,8 @@ var objs = {};
 
 var plots = {};
 
+var path = "data/data_new/";
+
 function changePlot(newPlotId) {
     var period = objs[newPlotId].period;
     // clear previous plot
@@ -12,7 +14,14 @@ function changePlot(newPlotId) {
     document.getElementById("selection").childNodes[0].children[objs[newPlotId].index].selected = true;
 }
 
-d3.csv("data/object_list.csv", function(csv) {
+function simpleDot(sel) {
+    sel.attr("fill", "black")
+        .attr("stroke", "none")
+        .attr("r", 3)
+        .attr("fill-opacity", 0.5);
+}
+
+d3.csv(path + "object_list.csv", function(csv) {
     for (var i=0; i<csv.length; ++i) {
         csv[i].id= Number(csv[i].id);
         csv[i].period= Number(csv[i].period);
@@ -49,8 +58,8 @@ d3.csv("data/object_list.csv", function(csv) {
 //////////////////////////////////////////////////////////////////////////////
 // plot a periodic astro-object
 function plotObject(id, period) {
-    var data_file = "data/"+id.toString()+".dat.json";
-
+    var data_file = path + id.toString()+".dat.json";
+    var error_file = path + id.toString()+".error.json";
     d3.json(data_file, function(json) {
         // Load Data
         for (var i=0; i<json.length; ++i) {
@@ -62,7 +71,7 @@ function plotObject(id, period) {
         // plot mag vs. time
         plotTimeMag(json, 500, 200);
         if (period > 0) {
-            var curve_data_file = "data/"+id.toString()+".fit.json";
+            var curve_data_file = path+id.toString()+".fit.json";
             var points = [];
             d3.json(curve_data_file, function(curve_data) {
                 for (var i = 0; i < curve_data[0].mag.length; ++i) {
@@ -81,6 +90,10 @@ function plotObject(id, period) {
                 plotPCA();
             });
         }
+    });
+
+    d3.json(error_file, function(json) {
+        plotErrorHistogram(json, 500, 200);
     });
 };
 
@@ -104,11 +117,9 @@ function createTimeMagPlot(data, width, height) {
 
     plot.setCircleProperties = function(sel) {
         sel
-            .attr("fill", "red")
-            .attr("stroke", "none")
+            .call(simpleDot)
             .attr("cx", function(d) { return xScale(d.time); })
-            .attr("cy", function(d) { return yScale(d.mag); })
-            .attr("r", 3)    ;
+            .attr("cy", function(d) { return yScale(d.mag); });
     };
 
     var svgSel = d3.select("#plotTimeMag")
@@ -174,12 +185,20 @@ function createPhaseMagPlot(data, period, curve_points, width, height) {
 
     plot.setCircleProperties = function(shift) { 
         return function(sel) {
-            sel
-                .attr("fill", "red")
-                .attr("stroke", "none")
+            sel.call(simpleDot)
                 .attr("cx", function(d) { return xScale(d.phase + shift); })
-                .attr("cy", function(d) { return yScale(d.mag); })
-                .attr("r", 3);
+                .attr("cy", function(d) { return yScale(d.mag); });
+        };
+    };
+
+    plot.setLineProperties = function(shift) { 
+        return function(sel) {
+            sel.call(simpleDot)
+                .attr("stroke", "black")
+                .attr("x1", function(d) { return xScale(d.phase + shift); })
+                .attr("x2", function(d) { return xScale(d.phase + shift); })
+                .attr("y1", function(d) { return yScale(d.mag - d.error); })
+                .attr("y2", function(d) { return yScale(d.mag + d.error); });
         };
     };
 
@@ -189,7 +208,8 @@ function createPhaseMagPlot(data, period, curve_points, width, height) {
         .attr("height", plotHeight);
 
     plot.svgSel = svgSel;
-    plot.circleSel = svgSel.append("g");
+    plot.lineSel = svgSel.append("g");
+    plot.circleSel = svgSel.append("g").attr("display", "none");
     plot.xAxisGroup = svgSel.append("g")
           .attr("transform", "translate(0, "+(plotHeight-30).toString()+")");
     plot.yAxisGroup = svgSel.append("g")
@@ -215,19 +235,33 @@ function plotPhaseMag(data, period, curve_points, width, height) {
 
     var yScale = plot.yScale.domain([magExtent[1], magExtent[0]]);
     var svgSel = plot.svgSel;
-    plot.circleSel.selectAll("circle").remove();
-    var circleSel = plot.circleSel.selectAll("circle").data(data).enter();
 
-    circleSel.append("circle")
+
+    plot.circleSel.selectAll("circle").remove(); // Ungh.
+    var circleJoin = plot.circleSel.selectAll("circle").data(data).enter();
+
+    circleJoin.append("circle")
         .call(plot.setCircleProperties(0));
 
-    circleSel.append("circle")
+    circleJoin.append("circle")
         .filter(function(d) { return d.phase - 1 >= -0.5; })
         .call(plot.setCircleProperties(-1));
 
-    circleSel.append("circle")
+    circleJoin.append("circle")
         .filter(function(d) { return d.phase + 1 <= 1.5; })
         .call(plot.setCircleProperties(1));
+
+    plot.lineSel.selectAll("line").remove(); // Ungh.
+    var lineJoin = plot.lineSel.selectAll("line").data(data).enter();
+
+    lineJoin.append("line")
+        .call(plot.setLineProperties(0));
+    lineJoin.append("line")
+        .filter(function(d) { return d.phase - 1 >= -0.5; })
+        .call(plot.setLineProperties(-1));
+    lineJoin.append("line")
+        .filter(function(d) { return d.phase + 1 <= 1.5; })
+        .call(plot.setLineProperties(1));
 
     plot.xAxisGroup.call(plot.xAxis);
     plot.yAxisGroup.call(plot.yAxis);
@@ -336,11 +370,9 @@ function plotPhaseMagScaled(data, period, curve_points, width, height) {
     var circleSel = plot.circleSel.selectAll("circle").data(data).enter();
 
     circleSel.append("circle")
-             .attr("fill", "red")
-             .attr("stroke", "none")
-             .attr("cx", function(d) { return xScale(d.phase); })
-             .attr("cy", function(d) { return yScale(d.mag-magAverage); })
-             .attr("r", 3);
+        .call(simpleDot)
+        .attr("cx", function(d) { return xScale(d.phase); })
+        .attr("cy", function(d) { return yScale(d.mag-magAverage); });
 
     plot.xAxisGroup.call(plot.xAxis);
     plot.yAxisGroup.call(plot.yAxis);
@@ -378,7 +410,7 @@ function plotPCA() {
     if (createdPCA)
         return;
     createdPCA = true;
-    d3.json("data/pca.json", function(data) {
+    d3.json(path + "/pca.json", function(data) {
 
     var xExtent = d3.extent(data, function(row) { return row[0]; });
     var yExtent = d3.extent(data, function(row) { return row[1]; });
@@ -390,24 +422,82 @@ function plotPCA() {
     var yScale = d3.scale.linear().domain(yExtent).range([plotHeight-30, 30]);
     var xAxis = d3.svg.axis().scale(xScale).ticks(5);
     var yAxis = d3.svg.axis().scale(yScale).ticks(5);
+    var colorScale = d3.scale.ordinal().domain([1,2,4,5,6,3,7,8,9,11,0]).range([
+       "#e41a1c",
+       "#377eb8",
+       "#4daf4a",
+       "#984ea3",
+       "#ff7f00",
+       "#00ffff",
+       "#00ffff",
+       "#00ffff",
+       "#00ffff",
+       "#00ffff",
+       "#00ffff"
+    ]);
 
+    var namesScale = d3.scale.ordinal().domain([1,2,4,5,6,3,7,8,9,11,0]).range([
+        "RR Lyr ab",
+        "RR Lyr c",
+        "Algol-like with 2 minima",
+        "Contact binary",
+        "delta Scu/SX Phe",
+        "Algol-like with 1 minima", 
+        "Long-period variable",
+        "heartbeat candidates",
+        "BL Her",
+        "anomalous Cepheids",
+        "other"
+    ]);
+        
     var svgSel = d3.select("#plotPCA")
             .append("svg")
             .attr("width", plotWidth)
             .attr("height", plotHeight);
 
+    var legendSel = svgSel.append("g").attr("transform","translate(60,340)");
+    var legendG = legendSel.selectAll("g")
+            .data(colorScale.domain())
+            .enter()
+            .append("g")
+            .classed("clickable", true);
+
+    legendG.append("rect").attr("width",10).attr("height",10).attr("fill", function(d) { return colorScale(d); }).attr("y", function(d, i) { return i * 11; });
+        legendG.append("text").text(function(d) { return namesScale(d); }).attr("x", 12).attr("y", function(d, i) { return i * 11 + 10; }).classed("legend", true);
+
     var circleSel = svgSel.selectAll("circle").data(data).enter();
+    function setDotColors(sel) {
+        sel.attr("fill", function(d) { return colorScale(d[2]); })
+            .attr("fill-opacity", 0.3)
+            .attr("stroke", "none");
+    }
 
     circleSel.append("circle")
             .classed("clickable", true)
-            .attr("fill", "rgba(255,0,0,0.1)")
-            .attr("stroke", "none")
+            .call(setDotColors)
             .attr("cx", function(d) { return xScale(d[0]); })
             .attr("cy", function(d) { return yScale(d[1]); })
             .attr("r", 3)
-            .on("click", function(d) {
+            .on("mouseover", function(d) {
                 changePlot(d[3]);
             });
+    var allCircles = svgSel.selectAll("circle");
+
+    legendG.on("mouseover", function(type) {
+        var s = allCircles;
+        s.filter(function(d) { return d[2] !== type; })
+            .attr("fill", "gray")
+            .attr("fill-opacity", 0.1);
+        s.filter(function(d) { return d[2] === type; })
+            .attr("fill-opacity", 0.5);
+        s.sort(function(a, b) { 
+            if (a[2] !== type) { a = -1; } else { a = 1; }
+            if (b[2] !== type) { b = -1; } else { b = 1; }
+            return d3.ascending(a, b);
+        });
+    }).on("mouseout", function(type) {
+        allCircles.call(setDotColors);
+    });
 
     svgSel.append("g")
           .attr("transform", "translate(0, "+(plotHeight-30).toString()+")")
@@ -417,5 +507,39 @@ function plotPCA() {
     svgSel.append("g")
           .attr("transform", "translate(50, 0)")
           .call(yAxis);
+
+
+    var axesSel = svgSel.append("g");
+    var axesLegend = svgSel.append("g");
+    d3.json(path+"pca_matrix.json", function(m) {
+        var xs = m[0], ys = m[1];
+        axesSel.selectAll("line")
+            .data(xs)
+            .enter()
+            .append("line")
+            .attr("x1",xScale(0))
+            .attr("y1",yScale(0))
+            .attr("x2",function(d,i) { return xScale(m[0][i] * 20); })
+            .attr("y2",function(d,i) { return yScale(m[1][i] * 20); })
+            .attr("stroke", function(d, i) {
+                return d3.hcl(i / 50 * 360, 50, 50);
+            });
+
+        axesLegend.selectAll("line")
+            .data(xs)
+            .enter()
+            .append("line")
+            .attr("x1",400)
+            .attr("y1",400)
+            .attr("x2",function(d,i) { return 400 + 20 * Math.cos(i / 50 * Math.PI * 2); })
+            .attr("y2",function(d,i) { return 400 + 20 * Math.sin(i / 50 * Math.PI * 2); })
+            .attr("stroke", function(d, i) {
+                return d3.hcl(i / 50 * 360, 50, 70);
+            })
+            .attr("stroke-width", 3);
+
+        
+    });
+
     });
 }
