@@ -1,3 +1,9 @@
 data
+data_*
+*.json
+*.txt
 .ropeproject
 *~
+*.pyc
+__pycache__
+node_modules/
