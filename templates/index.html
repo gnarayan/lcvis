@@ -5,6 +5,9 @@
         <title>LCVis</title>
         <script src="{{ url_for('static', filename='js/d3.v3.js') }}"></script>
         <script src="{{ url_for('static', filename='js/jquery.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/lux.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/underscore-min.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/webgl_tour.js') }}"></script>
         <script src="{{ url_for('static', filename='js/plot.js') }}"></script>
         <script src="{{ url_for('static', filename='js/errorPlot.js') }}"></script>
         <style>
@@ -70,7 +73,8 @@
                 <button onclick='plotUserObject()'>Plot Uploaded Object</button>
                 <button onclick='clearUserObject()'>Clear User Object</button>
             </div>
-            <div id="plotPCA"></div>
+            <div id="plotPCA">
+	      <canvas id="scatterplot" style="position:absolute" width="600" height="600"></canvas>	    </div>
             <div id="plotU_G" style="float:left"></div>
             <div id="plotR_I" style="float:left"></div>
         </div>

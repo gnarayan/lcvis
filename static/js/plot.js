@@ -869,7 +869,8 @@ function plotPCA(data) {
   function setDotColors(sel) {
     sel.attr("fill", function(d) {
         return colorScale(getType(d));
-      })
+    })
+      .attr("display", "none") // quickest hack to hide old plot.
       .attr("fill-opacity", 0.3)
       .attr("stroke", "none")
       .attr("cx", function(d) {
@@ -986,6 +987,8 @@ function plotPCA(data) {
   svgSel.append("g")
     .attr("transform", "translate(50, 0)")
     .call(yAxis);
+
+  init_webgl_tour(data, colorScale);
 
   // plot matrix weight
   // var axesSel = svgSel.append("g");
