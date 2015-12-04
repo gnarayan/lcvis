@@ -55,9 +55,9 @@ def pca(ids, matrix):
     data = []
 
     for obj_id, row in zip(ids, matrix):
-        data.append([round(results.project(row)[0],6),
-                     round(results.project(row)[1],6),
-                     obj_id])
+        prow = results.project(row)
+        data.append({"curve": list(round(i, 6) for i in prow),
+                     "id": obj_id})
 
     print("{}: Done.".format(timestamp()))
     return data
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     data = pca(obj_ids, matrix)
 
     for i in range(len(data)):
-        data[i].append(str(obj_types[data[i][2]]))
+        data[i]["type"] = str(obj_types[data[i]["id"]])
 
     f_out = open('./pca.json', 'w')
     f_out.write(json.dumps(data))

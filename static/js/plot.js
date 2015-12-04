@@ -769,12 +769,12 @@ function plotPhaseMagScaled(data, period, curve_points, width, height) {
 //////////////////////////////////////////////////////////////////////////////
 
 function plotPCA(data) {
-  var xExtent = d3.extent(data, function(row) {
-    return row[0];
-  });
-  var yExtent = d3.extent(data, function(row) {
-    return row[1];
-  });
+    function getX(d) { return d.curve[0]; }
+    function getY(d) { return d.curve[1]; }
+    function getId(d) { return d.id; }
+    function getType(d) { return d.type; }
+    var xExtent = d3.extent(data, getX);
+    var yExtent = d3.extent(data, getY);
 
   var plotWidth = 600;
   var plotHeight = 600;
@@ -868,23 +868,23 @@ function plotPCA(data) {
 
   function setDotColors(sel) {
     sel.attr("fill", function(d) {
-        return colorScale(d[3]);
+        return colorScale(getType(d));
       })
       .attr("fill-opacity", 0.3)
       .attr("stroke", "none")
       .attr("cx", function(d) {
-        return xScale(d[0]);
+          return xScale(getX(d));
       })
       .attr("cy", function(d) {
-        return yScale(d[1]);
+          return yScale(getY(d));
       })
       .attr("r", function(d) {
-        return d[3] < 0 ? 6 : 3;
+          return getType(d) < 0 ? 6 : 3;
       })
       .classed("clickable", true)
       .on("mouseover", function(d) {
         if (pinnedDotSel === null)
-          changePlot(d[2]);
+            changePlot(getId(d));
       })
       .on('click', highlightDot);
   }
@@ -909,22 +909,22 @@ function plotPCA(data) {
       .classed('pinned', true)
       .moveToFront();
 
-    changePlot(d[2]);
+    changePlot(getId(d));
 
     //show other information associated with this dot
-    attrs = objs[d[2]].attrs;
+      attrs = objs[getId(d)].attrs;
     var imgsrc = 'http://skyservice.pha.jhu.edu/DR12/ImgCutout/getjpeg.aspx?ra=' + attrs.ra + '&dec=' + attrs.dec + '&scale=0.4&width=280&height=280&opt=L&query=&Label=on';
     d3.select("#obj_img").append("img")
       .attr('src', imgsrc);
 
       // plot external catalog info
-      plotAttribute(d[2]);
+      plotAttribute(getId(d));
   }
 
   function unhighlightDot(sel) {
     sel.attr("fill-opacity", 0.3)
       .attr("r", function(d) {
-        return d[3] < 0 ? 6 : 3;
+          return getType(d) < 0 ? 6 : 3;
       })
       .attr('stroke', 'none')
       .classed('pinned', false);
@@ -956,7 +956,7 @@ function plotPCA(data) {
 
     var s = allCircles;
     s.filter(function(d) {
-        return d[3] !== type;
+        return getType(d) !== type;
       })
       .attr("fill", "gray")
       .attr("fill-opacity", 0.1)
@@ -966,14 +966,14 @@ function plotPCA(data) {
       })
       .on("mouseover", function(d) {});
     s.filter(function(d) {
-        return d[3] === type;
+        return getType(d) === type;
       })
       .attr("fill", colorScale(type))
       .attr("fill-opacity", 0.5)
       .classed("clickable", true)
       .on("mouseover", function(d) {
         if (pinnedDotSel === null)
-          changePlot(d[2]);
+            changePlot(getId(d));
       })
       .moveToFront();
   });
