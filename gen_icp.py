@@ -44,7 +44,7 @@ import scipy.linalg
 import scipy.optimize
 import math
 import pylab
-import pca_module
+# import pca_module
 
 from copy import copy
 from copy import deepcopy
