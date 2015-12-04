@@ -412,7 +412,7 @@ function plotPCA(data) {
 }
 
 function plotHeatmap(data, svgSel, plotWidth, plotHeight){
-    var data_flatten = []
+    var data_flatten = [];
     for(var i = 0; i < data.length; i ++){
         data_flatten = data_flatten.concat(data[i]);
     }
