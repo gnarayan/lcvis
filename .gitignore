@@ -1,8 +1,12 @@
 data
 data_*
 *.json
-*.txt
+*.dat
+*.pyc
 .ropeproject
 __pycache__
 node_modules/
 new
+*~
+venv
+
