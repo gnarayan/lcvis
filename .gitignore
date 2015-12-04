@@ -4,6 +4,8 @@ data_*
 *.dat
 *.pyc
 .ropeproject
+*~
+*.pyc
 __pycache__
 node_modules/
 new
